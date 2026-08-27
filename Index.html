@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>おりたたみ探偵事務所 File007</title>
+<style>
+/* LINE風（青背景×緑吹き出し）を避けた、おりたたみ世界観のチャットUI */
+:root {
+--bg: #20242f; --panel: #2a2f3d; --ink: #171f22;
+--indigo: #7a80d6; --deep: #424592; --paper: #f4f3ee; --paperline: #dddace;
+--white: #f2f3f7; --muted: #9aa1b5;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+margin: 0; background: var(--ink); color: var(--white);
+font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+display: flex; justify-content: center;
+}
+#app { width: 100%; max-width: 520px; height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
+
+/* ヘッダー：探偵事務所のチャット */
+header {
+background: var(--ink); padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+border-bottom: 2px solid var(--deep); flex-shrink: 0;
+}
+.avatar {
+width: 40px; height: 40px; border-radius: 50%; background: var(--panel);
+display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0;
+}
+.avatar svg { width: 24px; height: 24px; }
+.avatar::after {
+content: ""; position: absolute; right: 0; bottom: 0; width: 10px; height: 10px;
+border-radius: 50%; background: #7dd6a0; border: 2px solid var(--ink);
+}
+.hname { font-size: 15px; font-weight: bold; }
+.hsub { font-size: 10.5px; color: var(--muted); }
+
+/* チャットログ */
+#log { flex: 1; overflow-y: auto; padding: 16px 14px 8px; }
+.sys {
+text-align: center; font-size: 11px; color: var(--muted); margin: 12px 0;
+}
+.row { display: flex; margin: 10px 0; }
+.row.nf { justify-content: flex-start; }
+.row.me { justify-content: flex-end; }
+.bubble {
+max-width: 82%; padding: 10px 14px; font-size: 14px; line-height: 1.75; white-space: pre-wrap;
+border-radius: 4px 14px 14px 14px;
+background: var(--paper); color: #23252e; border-left: 3px solid var(--deep);
+box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.me .bubble {
+border-radius: 14px 4px 14px 14px;
+background: var(--deep); color: #fff; border-left: none; border-right: 3px solid var(--indigo);
+}
+.bubble img { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; cursor: zoom-in; }
+.bubble .act {
+display: block; margin-top: 10px; background: var(--deep); color: #fff; border: none;
+border-radius: 8px; padding: 10px 14px; font-size: 13.5px; font-weight: bold; cursor: pointer;
+font-family: inherit; width: 100%;
+}
+.typing { display: inline-block; }
+.typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8b8fa3; margin: 0 2px; animation: blink 1.2s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100% { opacity: .25 } 40% { opacity: 1 } }
+
+/* 入力欄 */
+#inputBar {
+display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+background: var(--ink); border-top: 1px solid var(--panel); flex-shrink: 0;
+}
+#msg {
+flex: 1; background: var(--panel); color: var(--white); border: 1px solid #3a4152;
+border-radius: 20px; padding: 10px 16px; font-size: 14px; font-family: inherit; outline: none;
+}
+#send {
+background: var(--deep); color: #fff; border: none; border-radius: 20px;
+padding: 10px 18px; font-size: 14px; font-weight: bold; cursor: pointer; font-family: inherit;
+}
+#send:disabled { opacity: .4; }
+
+/* 重ねギミック（フルスクリーンオーバーレイ） */
+#puzzle {
+display: none; position: fixed; inset: 0; background: rgba(10,12,18,.92); z-index: 50;
+flex-direction: column; align-items: center; justify-content: center; padding: 6px;
+}
+/* 横長の謎を最大表示：縦持ちは画面幅いっぱい、横持ちは高さで制限 */
+#puzzle .stage { position: relative; width: min(97vw, 140vh); max-width: none; touch-action: none; }
+#pzBg { width: 100%; display: block; border-radius: 8px; }
+#pzCard { position: absolute; width: 62%; cursor: grab; filter: drop-shadow(0 6px 14px rgba(0,0,0,.5)); }
+#pzCard.snapped { filter: drop-shadow(0 0 12px rgba(122,128,214,.9)); }
+#puzzle .rotate-hint { display: none; color: #cdd3e6; font-size: 12.5px; margin-top: 8px; text-align: center; }
+@media (orientation: portrait) { #puzzle .rotate-hint { display: block; } }
+#puzzle .bar { display: flex; gap: 10px; margin-top: 10px; }
+#puzzle button {
+background: var(--panel); color: var(--white); border: 1px solid #3a4152; border-radius: 8px;
+padding: 10px 16px; font-size: 13px; font-family: inherit; cursor: pointer;
+}
+#puzzle .hintline { color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center; }
+/* チャット画像の拡大表示（ライトボックス） */
+#imgLightbox { display: none; position: fixed; inset: 0; background: rgba(8,10,16,.94); z-index: 80;
+align-items: center; justify-content: center; padding: 16px; overflow: hidden; touch-action: none; }
+#imgLightbox.on { display: flex; }
+#imgLightbox img { max-width: 96vw; max-height: 92vh; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+touch-action: none; will-change: transform; transform-origin: center center; user-select: none; -webkit-user-drag: none; }
+#imgLightbox .close { position: fixed; top: 14px; right: 18px; color: #fff; font-size: 30px; line-height: 1;
+background: none; border: none; cursor: pointer; opacity: .85; }
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<div class="avatar">
+<svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="6" stroke="#7a80d6" stroke-width="2"/><line x1="14.5" y1="14.5" x2="20" y2="20" stroke="#7a80d6" stroke-width="3" stroke-linecap="round"/></svg>
+</div>
+<div>
+<div class="hname">N.F</div>
+<div class="hsub">おりたたみ探偵事務所 ｜ File007「消えた小説家」</div>
+</div>
+</header>
+<div id="log"></div>
+<div id="inputBar">
+<input id="msg" placeholder="N.Fにメッセージを送る" autocomplete="off">
+<button id="send" disabled>送信</button>
+</div>
+</div>
+
+<!-- 重ねギミック -->
+<div id="puzzle">
+<div class="stage" id="pzStage">
+<img id="pzBg" src="assets/bg_puzzle.jpg" alt="部屋の棚">
+<img id="pzCard" src="assets/nazo2_card.png" alt="謎の紙">
+</div>
+<div class="hintline">紙を動かしてみよう</div>
+<div class="rotate-hint">📱 スマホを横向きにすると大きく見やすいよ</div>
+<div class="bar">
+<button onclick="resetCard()">位置をリセット</button>
+<button onclick="closePuzzle()">チャットに戻る</button>
+</div>
+</div>
+
+<!-- チャット画像の拡大表示 -->
+<div id="imgLightbox">
+<button class="close" aria-label="閉じる">×</button>
+<img id="lbImg" src="" alt="拡大画像">
+</div>
+
+<script>
+// ================= CONFIG（File007・横山さん反応一覧 2026-07-22版 準拠） =================
+const CONFIG = {
+fileNo: "007",
+storageKey: "oritatami_file007",
+quoteUrl: "https://x.com/r4lu3m8l",   // ← 告知ポスト確定後に差し替え
+shareText: "【File007：おりたたみ探偵事務所　小説家失踪事件】\n君は小説家青井直次郎の居場所をつきとめ、\nN.Fに報告した\n#おりたたみ探偵事務所 #謎解き",
+intro: [
+{ sys: "N.Fがチャットツールを使い始めたようだ" },
+{ nf: "ああ、君か。……この道具は便利だな。メールより早い。" },
+{ nf: "早速だが、頼みたいことがある。\n小説家の青井直次郎が、謎のメモを一枚残して行方をくらませた。\n彼の行方を、謎を解いて教えてくれないか。" },
+{ nf: "これがそのメモだ。", img: "assets/nazo1_final2.png" },
+{ nf: "気になるものや、何か聞きたいことがあれば私に送ってくれ。現場にいるのは私だ。写真を撮って送ることもできる。" },
+{ nf: "わからなくなったら「わからない」「ヒント」と送ってくれ。一緒に考えることぐらいはできるだろう。" },
+{ nf: "それでは、頼んだよ。" },
+],
+// 反応リスト（判定は配列順）。patterns = [パターン, ...] いずれか成立で反応。
+// パターン = [ORグループ, ORグループ...] 全グループにヒットで成立。
+reactions: [
+{ // No4: 翳すギミック（No3より先に判定）
+patterns: [[["背景","部屋","紙","謎"],["重ね","かざ","翳"]]],
+reply: [{ nf: "なるほど、部屋に翳してみればいいのか。\n……どこに合わせたらいいのかさっぱりだ。\n君、やってみてはくれないか。",
+act: { label: "📄 紙を部屋に翳す", fn: "openPuzzle" } }],
+},
+{ // No2: bear → クマの中から謎②
+patterns: [[["bear","ｂｅａｒ","ベアー","べあー","くま","クマ","熊"]]],
+setStage: 2,
+reply: [
+{ nf: "bear…、そういえば棚の中にクマのぬいぐるみがあったな。中を見てみよう。" },
+{ nf: "このような紙が出てきたが、君は何かわかるか？\n……穴が開いているようだな。", img: "assets/nazo2_display.png" },
+],
+},
+{ // No5: cafe → クリア
+patterns: [[["cafe","café","ｃａｆｅ","カフェ","かふぇ","喫茶"]]],
+clear: true,
+reply: [
+{ nf: "カフェ、か。近場に一つあったな…、そこに向ってみることにしよう。" },
+{ nf: "まったく手のかかる小説家だ。\n今回も君のお手柄だな。いつも助かっているよ。\n\n―― N.F", share: true },
+],
+},
+{ // No3: 部屋の写真
+patterns: [[["背景"]], [["部屋"],["見"]], [["写真"]], [["棚"]]],
+reply: [{ nf: "部屋の写真を送ろう。\n…それにしても物が多いな。", img: "assets/bg_final.jpg" }],
+},
+{ // No1: メール・チャット
+patterns: [[["メール","チャット"]]],
+reply: [{ nf: "そうそう、ようやくチャットというものを覚えたんだ。私も時代の波に追いついたということかな…" }],
+},
+{ // No7: 青井直次郎
+patterns: [[["青井","直次郎"]]],
+reply: [{ nf: "謎の人物だ。どうやらいたずら好きな性格の様だな。\nこの事件だけで終わればいいんだが…" }],
+},
+{ // No6: N.F
+patterns: [[["N.F","NF","ＮＦ","えぬえふ"]]],
+reply: [{ nf: "あまりデジタルというものに明るくなくてな…。\nようやくチャットというものを覚えたよ。これでもう少し君とのやりとりが楽になるかな？" }],
+},
+],
+// No8〜26: ボタン選択式ヒントツリー
+hintEntry: "h8",
+hintNodes: {
+h8:  { nf: "一緒に考えてみよう。まず四色の四角が何を表しているか、想像がつくだろうか。",
+choices: [{ l: "はい", n: "h12" }, { l: "いいえ", n: "h10" }] },
+h10: { nf: "四角の色は「青」「赤」「灰色」「緑」だ、この色は何か関係するだろうか。",
+choices: [{ l: "わかった", n: "h11" }, { l: "わからない", n: "h12" }] },
+h11: { nf: "その調子だ。この1つめの謎は君の力で解いてみてくれ。",
+choices: [{ l: "2個めの謎のヒント", n: "h13" }] },
+h12: { nf: "色をそのまま使うようだが、日本語のままでは字数が合わないな…。\nこの1つめの謎は君の力で解いてみてくれ。",
+choices: [{ l: "2個めの謎のヒント", n: "h13" }] },
+h13: { nf: "1つ目の謎の答えは見つけたかな…？",
+choices: [{ l: "見つけた", n: "h14" }, { l: "見つけてない", n: "h12" }] },
+h14: { nf: "謎には穴が開いているようだ。何かを合わせて見るのだろうか…？\n私にできることは何かあるか？",
+choices: [{ l: "わかった", n: "h16" }, { l: "わからない", n: "h17" }] },
+h16: { nf: "私にチャットで指示してくれ。",
+choices: [{ l: "N.Fに指示したがわからない", n: "h18" }] },
+h17: { nf: "例えばこの部屋にかざしてみる。とかどうだろうか。\n私に何かできることはあるだろうか。写真を撮って送る等できるぞ。",
+choices: [{ l: "わかった", n: "h16" }, { l: "N.Fに指示したがわからない", n: "h18" }] },
+h18: { nf: "私から「写真」は貰ったかな？",
+choices: [{ l: "貰った", n: "h22" }, { l: "貰ってない", n: "h21" }] },
+h21: { nf: "私に写真を撮るように指示してもらえないだろうか。「何の」と言う部分までもらえると助かる。",
+choices: [{ l: "写真を貰ったがわからない", n: "h22" }] },
+h22: { nf: "しかし、どこに合わせればいいのかわからないな。この両端の模様が関連するのだろうか。",
+choices: [{ l: "わかった", n: "h24" }, { l: "わからない", n: "h25" }] },
+h24: { nf: "かざして、答えがわかったら、私に教えてくれ",
+choices: [{ l: "合わせる部分はわかったが、謎がわからない", n: "h26" }] },
+h25: { nf: "この模様は、この棚の中のアイテムとよく形が似ているな…？\nこの模様二つがうまく合致する部分を探せないだろうか。",
+choices: [{ l: "合わせる部分はわかったが、謎がわからない", n: "h26" }] },
+h26: { nf: "穴から見えた物を、それぞれ当てはめてみてはどうだろうか。\n最初の「くまのぬいぐるみ」をどうやって解いたか、思い出してみるとよさそうだ。\nここからは君の力で解いてくれ。頼りにしているよ。" },
+},
+hintWords: ["ヒント", "ひんと", "わからない", "分からない", "たすけて", "助けて"],
+// 拡張（リスト外・世界観の連続イースターエッグ）
+eggs: [
+{ words: ["三田駅", "みたえき"], reply: "三田駅……春野鏡子の事件を思い出すな。" },
+{ words: ["春野鏡子"], reply: "彼女の事件は、今も忘れられない。" },
+{ words: ["bread", "パン"], reply: "あのパン屋のクロワッサンはうまかったな……いや、仕事の話だった。" },
+{ words: ["ミルク", "猫"], reply: "ミルクちゃんは元気にしているそうだ。古本屋の看板猫が板についてきたらしい。" },
+{ words: ["かくしごと", "書く仕事"], reply: "古書の一件も彼だったな……。まったく、懲りない男だ。" },
+],
+wrongReplies: [
+"ふむ……それでは、条件と一致しないようだ。",
+"なるほど。だが、決め手に欠けるな。もう一度資料を見てみてくれ。",
+"うーむ。私にはピンと来ないが、君はどう思う？",
+],
+puzzle: {
+bg: "assets/bg_puzzle.jpg",
+card: "assets/nazo2_card.png",
+cardWidthPct: 68.01,   // 新クリーン棚(ノイズ除去版)を部屋に合成。花瓶を棚側で右13px調整・クマ再フィット済み
+target: { x: 20.47, y: 22.92 },
+start: { x: 31, y: 42 },   // ドラッグ開始位置
+revealDist: 6,   // 手で目印に合わせて、この範囲まで近づけば覗けたと判定（吸い付きはしない）
+onSnap: [
+{ sys: "紙を重ねて、穴から中を覗いた" },
+{ nf: "穴から何かが見えているな。よく見てみてくれ。" },
+],
+},
+};
+
+// ================= 計測ビーコン（総アクセス数・到達者数／運営は除外） =================
+// 運営（阿部さん・横山さん）は各端末で一度 ?staff=nf-staff-2026 を付けて開くと以後除外される
+const STATS = {
+enabled: false, // GitHub Pagesは静的ホスティングのため /api/count は使用しない
+vid() {
+let v = localStorage.getItem("ott_vid");
+if (!v) { v = (self.crypto?.randomUUID?.() || (Date.now() + "-" + Math.random().toString(36).slice(2))); localStorage.setItem("ott_vid", v); }
+return v;
+},
+isStaff() {
+const p = new URLSearchParams(location.search);
+if (p.get("staff") === "nf-staff-2026") localStorage.setItem("ott_staff", "1");
+return localStorage.getItem("ott_staff") === "1";
+},
+};
+function beacon(event) {
+if (!STATS.enabled) return;
+try {
+const data = JSON.stringify({ event, vid: STATS.vid(), staff: STATS.isStaff() });
+// GitHub PagesではサーバーAPIがないため計測送信は無効
+} catch (e) {}
+}
+beacon("view");
+
+// 告知ポストURLは config.json で差し替え可能（ポスト後にURLだけ変えて再デプロイ）
+fetch("./config.json", { cache: "no-store" })
+.then((r) => (r.ok ? r.json() : null))
+.then((c) => { if (c && c.quoteUrl) CONFIG.quoteUrl = c.quoteUrl; })
+.catch(() => {});
+
+// ================= チャットエンジン =================
+const $ = (id) => document.getElementById(id);
+const log = $("log"), msg = $("msg"), send = $("send");
+const state = { stage: 1, snapped: false, cleared: false, history: [] };
+
+function saveState() { localStorage.setItem(CONFIG.storageKey, JSON.stringify(state)); }
+function loadState() {
+try { return JSON.parse(localStorage.getItem(CONFIG.storageKey)); } catch (e) { return null; }
+}
+
+function el(html) { const d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+function addSys(text) { log.appendChild(el(`<div class="sys">${escapeHtml(text)}</div>`)); scrollDown(); }
+function addMe(text) {
+log.appendChild(el(`<div class="row me"><div class="bubble">${escapeHtml(text)}</div></div>`)); scrollDown();
+}
+function addNF(item) {
+const b = el(`<div class="row nf"><div class="bubble"></div></div>`);
+const bubble = b.querySelector(".bubble");
+bubble.textContent = item.nf ?? item;
+if (item.img) { const i = document.createElement("img"); i.src = item.img; bubble.appendChild(i); }
+if (item.act) {
+const btn = document.createElement("button"); btn.className = "act"; btn.textContent = item.act.label;
+btn.onclick = () => window[item.act.fn]();
+bubble.appendChild(btn);
+}
+if (item.choices) {
+const wrap = document.createElement("div");
+for (const c of item.choices) {
+const btn = document.createElement("button"); btn.className = "act"; btn.textContent = c.l;
+btn.onclick = () => {
+wrap.querySelectorAll("button").forEach((x) => { x.disabled = true; x.style.opacity = .45; });
+addMe(c.l);
+setTimeout(() => showHint(c.n), 300);
+};
+wrap.appendChild(btn);
+}
+bubble.appendChild(wrap);
+}
+log.appendChild(b); scrollDown();
+if (item.share) {
+const btn = el(`<div class="row nf"><div class="bubble" style="text-align:center"><button class="act" onclick="postToX()">🔍 Xで解決を報告する</button></div></div>`);
+log.appendChild(btn); scrollDown();
+}
+}
+
+let queue = Promise.resolve();
+function nfSay(items, delayBase = 900) {
+const arr = Array.isArray(items) ? items : [items];
+for (const item of arr) {
+queue = queue.then(() => new Promise((res) => {
+if (item.sys) { addSys(item.sys); return setTimeout(res, 500); }
+const t = el(`<div class="row nf"><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>`);
+log.appendChild(t); scrollDown();
+const wait = Math.min(2000, delayBase + (item.nf?.length ?? 0) * 12);
+setTimeout(() => { t.remove(); addNF(item); res(); }, wait);
+}));
+}
+return queue;
+}
+
+const norm = (s) => s.toLowerCase().replace(/[\s　]/g, "");
+const hitGroup = (input, words) => words.some((w) => norm(input).includes(norm(w)));
+const hitPattern = (input, groups) => groups.every((g) => hitGroup(input, g));
+const hitReaction = (input, r) => r.patterns.some((p) => hitPattern(input, p));
+
+function showHint(id) {
+const node = CONFIG.hintNodes[id];
+if (node) nfSay(node);
+}
+
+function route(input) {
+state.history.push({ t: Date.now(), stage: state.stage, input });
+
+// 1) 反応リスト（横山さんNo1〜7）
+for (const r of CONFIG.reactions) {
+if (hitReaction(input, r)) {
+if (r.setStage) state.stage = Math.max(state.stage, r.setStage);
+if (r.clear && !state.cleared) { state.cleared = true; beacon("clear"); }
+nfSay(r.reply);
+saveState(); return;
+}
+}
+// 2) ヒントツリー（No8〜26）
+if (hitGroup(input, CONFIG.hintWords)) {
+showHint(CONFIG.hintEntry); saveState(); return;
+}
+// 3) イースターエッグ（拡張）
+for (const egg of CONFIG.eggs) {
+if (hitGroup(input, egg.words)) { nfSay({ nf: egg.reply }); return; }
+}
+// 4) その他
+nfSay({ nf: CONFIG.wrongReplies[Math.floor(Math.random() * CONFIG.wrongReplies.length)] });
+}
+
+// ================= 重ねギミック =================
+const pz = $("puzzle"), stage_ = $("pzStage"), card = $("pzCard");
+let cardPos = { ...CONFIG.puzzle.start };
+let pzDrag = null;
+
+function openPuzzle() {
+pz.style.display = "flex";
+card.style.width = CONFIG.puzzle.cardWidthPct + "%";
+if (CONFIG.puzzle.cardHeightPct) card.style.height = CONFIG.puzzle.cardHeightPct + "%";
+applyCard();
+}
+function closePuzzle() { pz.style.display = "none"; }
+function resetCard() { cardPos = { ...CONFIG.puzzle.start }; applyCard(); }
+function applyCard() { card.style.left = cardPos.x + "%"; card.style.top = cardPos.y + "%"; }
+
+card.addEventListener("pointerdown", (ev) => {
+ev.preventDefault();
+const r = stage_.getBoundingClientRect();
+pzDrag = { sx: ev.clientX, sy: ev.clientY, ox: cardPos.x, oy: cardPos.y, w: r.width, h: r.height };
+try { card.setPointerCapture(ev.pointerId); } catch (e) {}
+});
+card.addEventListener("pointermove", (ev) => {
+if (!pzDrag) return;
+cardPos.x = pzDrag.ox + ((ev.clientX - pzDrag.sx) / pzDrag.w) * 100;
+cardPos.y = pzDrag.oy + ((ev.clientY - pzDrag.sy) / pzDrag.h) * 100;
+applyCard();
+});
+card.addEventListener("pointerup", () => {
+if (!pzDrag) return;
+pzDrag = null;
+const t = CONFIG.puzzle.target;
+const d = Math.hypot(cardPos.x - t.x, cardPos.y - t.y);
+// 吸い付き・位置固定はしない（自分の手で目印に合わせる）。
+// おおよそ合ったら気づきの合図だけ出す。カードは動かさず、閉じもしない。
+if (d < CONFIG.puzzle.revealDist && !state.snapped) {
+state.snapped = true; saveState();
+nfSay(CONFIG.puzzle.onSnap);                            // 合致したらN.Fのセリフをチャットへ
+}
+});
+
+// ================= X報告（File006と同一仕様：本文末尾に告知URLを連結） =================
+function postToX() {
+const text = CONFIG.shareText + "\n" + CONFIG.quoteUrl;
+const postUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(text);
+window.open(postUrl, "_blank", "noopener,noreferrer");
+}
+
+// ================= 起動 =================
+msg.addEventListener("input", () => { send.disabled = msg.value.trim() === ""; });
+function submit() {
+const v = msg.value.trim();
+if (!v) return;
+addMe(v); msg.value = ""; send.disabled = true;
+setTimeout(() => route(v), 300);
+}
+send.onclick = submit;
+msg.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+
+// チャット画像をタップ/クリックで拡大表示（ライトボックス）＋ ピンチ/ホイールでさらに拡大
+const lightbox = $("imgLightbox"), lbImg = $("lbImg");
+let lbScale = 1, lbTx = 0, lbTy = 0;
+const lbPts = new Map();
+let lbStartDist = 0, lbStartScale = 1, lbStartTxy = { x: 0, y: 0 }, lbStartMid = { x: 0, y: 0 }, lbMoved = false, lbLastTap = 0;
+function lbApply() { lbImg.style.transform = `translate(${lbTx}px,${lbTy}px) scale(${lbScale})`; }
+function lbReset() { lbScale = 1; lbTx = 0; lbTy = 0; lbApply(); }
+function openLightbox(src) { lbReset(); lbImg.src = src; lightbox.classList.add("on"); }
+function closeLightbox() { lightbox.classList.remove("on"); lbImg.src = ""; lbReset(); }
+log.addEventListener("click", (e) => {
+const im = e.target.closest(".bubble img");
+if (im && im.src) openLightbox(im.src);
+});
+lightbox.querySelector(".close").addEventListener("click", (e) => { e.stopPropagation(); closeLightbox(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+// ピンチズーム / ドラッグ移動 / タップで閉じる / ダブルタップで拡大切替
+lightbox.addEventListener("pointerdown", (e) => {
+lbPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+lbMoved = false;
+const now = Date.now();
+if (lbPts.size === 1 && now - lbLastTap < 300) { lbScale > 1 ? lbReset() : (lbScale = 2.6, lbApply()); lbMoved = true; }
+lbLastTap = now;
+if (lbPts.size === 2) {
+const [a, b] = [...lbPts.values()];
+lbStartDist = Math.hypot(a.x - b.x, a.y - b.y); lbStartScale = lbScale; lbStartTxy = { x: lbTx, y: lbTy };
+} else { lbStartTxy = { x: lbTx, y: lbTy }; lbStartMid = { x: e.clientX, y: e.clientY }; }
+try { lightbox.setPointerCapture(e.pointerId); } catch (err) {}
+});
+lightbox.addEventListener("pointermove", (e) => {
+if (!lbPts.has(e.pointerId)) return;
+lbPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+if (lbPts.size === 2) {
+const [a, b] = [...lbPts.values()];
+const d = Math.hypot(a.x - b.x, a.y - b.y);
+lbScale = Math.min(6, Math.max(1, lbStartScale * (d / lbStartDist))); lbMoved = true; lbApply();
+} else if (lbPts.size === 1 && lbScale > 1) {
+lbTx = lbStartTxy.x + (e.clientX - lbStartMid.x); lbTy = lbStartTxy.y + (e.clientY - lbStartMid.y); lbMoved = true; lbApply();
+}
+});
+function lbEnd(e) {
+lbPts.delete(e.pointerId);
+if (lbPts.size === 0 && !lbMoved && lbScale <= 1) closeLightbox();  // ズームしていない時の単純タップで閉じる
+if (lbScale <= 1) { lbTx = 0; lbTy = 0; lbApply(); }
+}
+lightbox.addEventListener("pointerup", lbEnd);
+lightbox.addEventListener("pointercancel", lbEnd);
+lightbox.addEventListener("wheel", (e) => {  // PC: ホイールで拡大縮小
+e.preventDefault();
+lbScale = Math.min(6, Math.max(1, lbScale * (e.deltaY < 0 ? 1.12 : 0.89)));
+if (lbScale <= 1) { lbTx = 0; lbTy = 0; }
+lbApply();
+}, { passive: false });
+
+// 運営検証用: ?reset=1 で進行状況だけ消して最初から（運営除外フラグ ott_staff は残す）
+{
+const _p = new URLSearchParams(location.search);
+if (_p.has("reset")) {
+localStorage.removeItem(CONFIG.storageKey);
+_p.delete("reset");
+history.replaceState(null, "", location.pathname + (_p.toString() ? "?" + _p.toString() : ""));
+}
+}
+const saved = loadState();
+if (saved && (saved.stage !== 1 || saved.snapped || (saved.history?.length ?? 0) > 0)) {
+Object.assign(state, saved);
+addSys("―― 前回の捜索の続きから ――");
+nfSay({ nf: "戻ったか。捜索を続けよう。" });
+} else {
+CONFIG.intro.forEach((m) => nfSay(m, 700));
+}
+</script>
+</body>
+</html>
