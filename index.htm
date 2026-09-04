@@ -44,12 +44,17 @@ text-align: center; font-size: 11px; color: var(--muted); margin: 12px 0;
 }
 .row { display: flex; margin: 10px 0; }
 .row.nf { justify-content: flex-start; }
+.row.aoi { justify-content: flex-start; }
 .row.me { justify-content: flex-end; }
 .bubble {
 max-width: 82%; padding: 10px 14px; font-size: 14px; line-height: 1.75; white-space: pre-wrap;
 border-radius: 4px 14px 14px 14px;
 background: var(--paper); color: #23252e; border-left: 3px solid var(--deep);
 box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.aoi .bubble {
+border-radius: 4px 14px 14px 14px;
+background: #d9ecff; color: #18324a; border-left: 3px solid #7bb8ea;
 }
 .me .bubble {
 border-radius: 14px 4px 14px 14px;
@@ -148,7 +153,7 @@ background: none; border: none; cursor: pointer; opacity: .85; }
 </div>
 
 <script>
-// ================= CONFIG（File008・反応一覧.xlsx 準拠） =================
+// ================= CONFIG（File008・反応一覧(1).xlsx 準拠） =================
 const CONFIG = {
 fileNo: "008",
 storageKey: "oritatami_file008",
@@ -157,9 +162,19 @@ shareText: "【File008：おりたたみ探偵事務所　カフェ謎を解決�
 
 intro: [
 { nf: "すまない、助けてほしい。\n小説家、青井直次郎を追ってカフェに来たところ、\n本人と会うことに成功した。\nがあｓｆｇｇｈｈSfghjjkkjna" },
-{ nf: "やあ、こんにちは。\n初めまして、青井直次郎だ。\nN.Fさんがチャット打つのが遅そうだからね。\n僕が代わりに君に依頼をしようと思って、スマホを借りたんだよ。" },
-{ nf: "非常に簡単なことだ。\n今次の新作に悩んでいてね、でも僕はこの通り忙しいから、あまりふらふらと出歩けない。\nそこでN.Fさんと君に僕が提示する場所に行って取材をしてきてほしいんだ。\n\nが、ただ依頼をするだけだと面白くないだろ？\nだからさ、謎を出させてもらうよ。\n君の実力を見せてくれないか？" },
-{ nf: "スマホはＮ．Ｆさんに返すよ。\nじゃあ、頼んだよ。" },
+{ nf: `やあ、こんにちは。
+初めまして、青井直次郎だ。
+N.Fさんがチャット打つのが遅そうだからね。
+僕が代わりに君に依頼をしようと思って、スマホを借りたんだよ。`, role: "aoi" },
+{ nf: `非常に簡単なことだ。
+今次の新作に悩んでいてね、でも僕はこの通り忙しいから、あまりふらふらと出歩けない。
+そこでN.Fさんと君に僕が提示する場所に行って取材をしてきてほしいんだ。
+
+が、ただ依頼をするだけだと面白くないだろ？
+だからさ、謎を出させてもらうよ。
+君の実力を見せてくれないか？`, role: "aoi" },
+{ nf: `スマホはＮ．Ｆさんに返すよ。
+じゃあ、頼んだよ。`, role: "aoi" },
 { nf: "Ｎ．Ｆだ。\n……スマートフォンをを奪い取られたと思ったら押し返された…。\n申し訳ないが、謎を解いて取材先を特定してもらえないだろうか。\n\n何か困ったことがあれば、私に言ってくれ。\n「わからない」や「ヒント」と言ってもらえたら、一緒に考えることはできるだろう。\nそれじゃあ頼んだよ。", img: "file008.png" },
 ],
 
@@ -188,12 +203,22 @@ reply: [
 { nf: "ブレンドとボード？が出てきたが…\nこれはどういう意味なのだろうか？\n君ならこのボードの意味がわかるか？", img: "file008_menu02.png", delayBefore: 2000 },
 ],
 },
+{ // 追加: コーヒーカップを見る
+patterns: [[["コーヒー","ブレンド","カップ"],["見"]]],
+reply: [
+{ nf: "コーヒーカップの写真を送ろう。どうだろうか。", img: "file008_cup.png", delayBefore: 2000 },
+],
+},
 { // No5〜6: ブレンドを飲む／空にする
 patterns: [[["ブレンド"],["飲","空"]]],
 reply: [
 { nf: "ゆっくり味わいたいところだが、君がそう言うのであれば…" },
 { nf: "ん…？内側に模様が書かれているタイプのようだが…\n何か文字にも見えるな…", img: "file008_cup_b.png", delayBefore: 2000 },
 ],
+},
+{ // 追加: light / ライト
+patterns: [[["light","ライト"]]],
+reply: [{ nf: "light？なんのことだろうか。心当たりはあるか？" }],
 },
 { // No7〜8: 店内の電気を消す
 patterns: [[["電気","明り","明かり","照明","蛍光灯"],["消","暗","OFF","off","オフ"]]],
@@ -299,10 +324,13 @@ choices: [{ l: "わかった", n: "h40" }, { l: "わからない", n: "h39" }]
 },
 h39: {
 nf: "私に電気は消させたかな…？",
-choices: [{ l: "消してもらった", n: "h40" }, { l: "消させていない", n: null }]
+choices: [{ l: "消してもらった", n: "h40" }, { l: "消させていない", n: "h41" }]
 },
 h40: {
 nf: "メニューの外側が光っているな…？これはどうしたら読めるようになるんだろうか？\nここからは君だけで考えてみてくれ。頼りにしているよ。"
+},
+h41: {
+nf: "まずは電気を消すように私に伝えてもらえないだろうか。"
 },
 },
 
@@ -374,7 +402,8 @@ function addMe(text) {
 log.appendChild(el(`<div class="row me"><div class="bubble">${escapeHtml(text)}</div></div>`)); scrollDown();
 }
 function addNF(item) {
-const b = el(`<div class="row nf"><div class="bubble"></div></div>`);
+const role = (item && item.role === "aoi") ? "aoi" : "nf";
+const b = el(`<div class="row ${role}"><div class="bubble"></div></div>`);
 const bubble = b.querySelector(".bubble");
 bubble.textContent = item.nf ?? item;
 if (item.img) { const i = document.createElement("img"); i.src = item.img; bubble.appendChild(i); }
@@ -410,7 +439,8 @@ for (const item of arr) {
 queue = queue.then(() => new Promise((res) => {
 const begin = () => {
 if (item.sys) { addSys(item.sys); return setTimeout(res, 500); }
-const t = el(`<div class="row nf"><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>`);
+const role = (item && item.role === "aoi") ? "aoi" : "nf";
+const t = el(`<div class="row ${role}"><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>`);
 log.appendChild(t); scrollDown();
 const wait = Math.min(2000, delayBase + (item.nf?.length ?? 0) * 12);
 setTimeout(() => { t.remove(); addNF(item); res(); }, wait);
