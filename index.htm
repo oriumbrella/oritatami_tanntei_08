@@ -448,36 +448,6 @@ onSnap: [],
 },
 };
 
-// ================= 計測ビーコン（総アクセス数・到達者数／運営は除外） =================
-// 運営（阿部さん・横山さん）は各端末で一度 ?staff=nf-staff-2026 を付けて開くと以後除外される
-const STATS = {
-enabled: false, // GitHub Pagesは静的ホスティングのため /api/count は使用しない
-vid() {
-let v = localStorage.getItem("ott_vid");
-if (!v) { v = (self.crypto?.randomUUID?.() || (Date.now() + "-" + Math.random().toString(36).slice(2))); localStorage.setItem("ott_vid", v); }
-return v;
-},
-isStaff() {
-const p = new URLSearchParams(location.search);
-if (p.get("staff") === "nf-staff-2026") localStorage.setItem("ott_staff", "1");
-return localStorage.getItem("ott_staff") === "1";
-},
-};
-function beacon(event) {
-if (!STATS.enabled) return;
-try {
-const data = JSON.stringify({ event, vid: STATS.vid(), staff: STATS.isStaff() });
-// GitHub PagesではサーバーAPIがないため計測送信は無効
-} catch (e) {}
-}
-beacon("view");
-
-// 告知ポストURLは config.json で差し替え可能（ポスト後にURLだけ変えて再デプロイ）
-fetch("./config.json", { cache: "no-store" })
-.then((r) => (r.ok ? r.json() : null))
-.then((c) => { if (c && c.quoteUrl) CONFIG.quoteUrl = c.quoteUrl; })
-.catch(() => {});
-
 // ================= チャットエンジン =================
 const $ = (id) => document.getElementById(id);
 const log = $("log"), msg = $("msg"), send = $("send");
@@ -582,7 +552,7 @@ if (node) nfSay(node);
 function route(input) {
 state.history.push({ t: Date.now(), stage: state.stage, input });
 
-// 1) 反応リスト（横山さんNo1〜7）
+// 1) 反応リスト
 for (const r of CONFIG.reactions) {
 if (r.when && !r.when(state)) continue;
 if (hitReaction(input, r)) {
