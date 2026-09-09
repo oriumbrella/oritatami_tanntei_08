@@ -686,13 +686,7 @@ if (lbScale <= 1) { lbTx = 0; lbTy = 0; }
 lbApply();
 }, { passive: false });
 
-// 運営検証用: ?reset=1 で進行状況だけ消して最初から（運営除外フラグ ott_staff は残す）
-{
-const _p = new URLSearchParams(location.search);
-if (_p.has("reset")) {
-localStorage.removeItem(CONFIG.storageKey);
-_p.delete("reset");
-history.replaceState(null, "", location.pathname + (_p.toString() ? "?" + _p.toString() : ""));
+  
 }
 }
 const saved = loadState();
