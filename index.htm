@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>おりたたみ探偵事務所 File008</title>
 <style>
-/* LINE風（青背景×緑吹き出し）を避けた、おりたたみ世界観のチャットUI */
+/* おりたたみ世界観のチャットUI */
 :root {
 --bg: #20242f; --panel: #2a2f3d; --ink: #171f22;
 --indigo: #7a80d6; --deep: #424592; --paper: #f4f3ee; --paperline: #dddace;
@@ -129,20 +129,6 @@ background: none; border: none; cursor: pointer; opacity: .85; }
 <div id="inputBar">
 <input id="msg" placeholder="N.Fにメッセージを送る" autocomplete="off">
 <button id="send" disabled>送信</button>
-</div>
-</div>
-
-<!-- 重ねギミック -->
-<div id="puzzle">
-<div class="stage" id="pzStage">
-<img id="pzBg" src="assets/bg_puzzle.jpg" alt="部屋の棚">
-<img id="pzCard" src="assets/nazo2_card.png" alt="謎の紙">
-</div>
-<div class="hintline">紙を動かしてみよう</div>
-<div class="rotate-hint">📱 スマホを横向きにすると大きく見やすいよ</div>
-<div class="bar">
-<button onclick="resetCard()">位置をリセット</button>
-<button onclick="closePuzzle()">チャットに戻る</button>
 </div>
 </div>
 
@@ -448,6 +434,13 @@ onSnap: [],
 },
 };
 
+
+// 告知ポストURLは config.json で差し替え可能（ポスト後にURLだけ変えて再デプロイ）
+fetch("./config.json", { cache: "no-store" })
+.then((r) => (r.ok ? r.json() : null))
+.then((c) => { if (c && c.quoteUrl) CONFIG.quoteUrl = c.quoteUrl; })
+.catch(() => {});
+
 // ================= チャットエンジン =================
 const $ = (id) => document.getElementById(id);
 const log = $("log"), msg = $("msg"), send = $("send");
@@ -552,13 +545,13 @@ if (node) nfSay(node);
 function route(input) {
 state.history.push({ t: Date.now(), stage: state.stage, input });
 
-// 1) 反応リスト
+// 1) 反応リスト（No1〜7）
 for (const r of CONFIG.reactions) {
 if (r.when && !r.when(state)) continue;
 if (hitReaction(input, r)) {
 if (r.setStage) state.stage = Math.max(state.stage, r.setStage);
 if (r.set) Object.assign(state, r.set);
-if (r.clear && !state.cleared) { state.cleared = true; beacon("clear"); }
+if (r.clear && !state.cleared) { state.cleared = true; }
 nfSay(r.reply);
 saveState(); return;
 }
@@ -575,43 +568,6 @@ if (hitGroup(input, egg.words)) { nfSay({ nf: egg.reply }); return; }
 nfSay({ nf: CONFIG.wrongReplies[Math.floor(Math.random() * CONFIG.wrongReplies.length)] });
 }
 
-// ================= 重ねギミック =================
-const pz = $("puzzle"), stage_ = $("pzStage"), card = $("pzCard");
-let cardPos = { ...CONFIG.puzzle.start };
-let pzDrag = null;
-
-function openPuzzle() {
-pz.style.display = "flex";
-card.style.width = CONFIG.puzzle.cardWidthPct + "%";
-if (CONFIG.puzzle.cardHeightPct) card.style.height = CONFIG.puzzle.cardHeightPct + "%";
-applyCard();
-}
-function closePuzzle() { pz.style.display = "none"; }
-function resetCard() { cardPos = { ...CONFIG.puzzle.start }; applyCard(); }
-function applyCard() { card.style.left = cardPos.x + "%"; card.style.top = cardPos.y + "%"; }
-
-card.addEventListener("pointerdown", (ev) => {
-ev.preventDefault();
-const r = stage_.getBoundingClientRect();
-pzDrag = { sx: ev.clientX, sy: ev.clientY, ox: cardPos.x, oy: cardPos.y, w: r.width, h: r.height };
-try { card.setPointerCapture(ev.pointerId); } catch (e) {}
-});
-card.addEventListener("pointermove", (ev) => {
-if (!pzDrag) return;
-cardPos.x = pzDrag.ox + ((ev.clientX - pzDrag.sx) / pzDrag.w) * 100;
-cardPos.y = pzDrag.oy + ((ev.clientY - pzDrag.sy) / pzDrag.h) * 100;
-applyCard();
-});
-card.addEventListener("pointerup", () => {
-if (!pzDrag) return;
-pzDrag = null;
-const t = CONFIG.puzzle.target;
-const d = Math.hypot(cardPos.x - t.x, cardPos.y - t.y);
-// 吸い付き・位置固定はしない（自分の手で目印に合わせる）。
-// おおよそ合ったら気づきの合図だけ出す。カードは動かさず、閉じもしない。
-if (d < CONFIG.puzzle.revealDist && !state.snapped) {
-state.snapped = true; saveState();
-nfSay(CONFIG.puzzle.onSnap);                            // 合致したらN.Fのセリフをチャットへ
 }
 });
 
@@ -686,7 +642,12 @@ if (lbScale <= 1) { lbTx = 0; lbTy = 0; }
 lbApply();
 }, { passive: false });
 
-  
+{
+const _p = new URLSearchParams(location.search);
+if (_p.has("reset")) {
+localStorage.removeItem(CONFIG.storageKey);
+_p.delete("reset");
+history.replaceState(null, "", location.pathname + (_p.toString() ? "?" + _p.toString() : ""));
 }
 }
 const saved = loadState();
