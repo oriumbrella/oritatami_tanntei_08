@@ -139,7 +139,7 @@ background: none; border: none; cursor: pointer; opacity: .85; }
 </div>
 
 <script>
-// ================= CONFIG（File008・反応一覧(1).xlsx 準拠） =================
+// ================= CONFIG（File008・反応一覧） =================
 const CONFIG = {
 fileNo: "008",
 storageKey: "oritatami_file008",
@@ -435,12 +435,6 @@ onSnap: [],
 };
 
 
-// 告知ポストURLは config.json で差し替え可能（ポスト後にURLだけ変えて再デプロイ）
-fetch("./config.json", { cache: "no-store" })
-.then((r) => (r.ok ? r.json() : null))
-.then((c) => { if (c && c.quoteUrl) CONFIG.quoteUrl = c.quoteUrl; })
-.catch(() => {});
-
 // ================= チャットエンジン =================
 const $ = (id) => document.getElementById(id);
 const log = $("log"), msg = $("msg"), send = $("send");
@@ -571,7 +565,7 @@ nfSay({ nf: CONFIG.wrongReplies[Math.floor(Math.random() * CONFIG.wrongReplies.l
 }
 });
 
-// ================= X報告（File006と同一仕様：本文末尾に告知URLを連結） =================
+// ================= X報告=================
 function postToX() {
 const text = CONFIG.shareText + (CONFIG.quoteUrl ? "\n" + CONFIG.quoteUrl : "");
 const postUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(text);
