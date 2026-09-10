@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>おりたたみ探偵事務所 File008</title>
 <style>
-/* おりたたみ世界観のチャットUI */
+/* LINE風（青背景×緑吹き出し）を避けた、おりたたみ世界観のチャットUI */
 :root {
 --bg: #20242f; --panel: #2a2f3d; --ink: #171f22;
 --indigo: #7a80d6; --deep: #424592; --paper: #f4f3ee; --paperline: #dddace;
@@ -153,7 +153,7 @@ background: none; border: none; cursor: pointer; opacity: .85; }
 </div>
 
 <script>
-// ================= CONFIG（File008・反応準拠） =================
+// ================= CONFIG（File008・反応一覧(1).xlsx 準拠） =================
 const CONFIG = {
 fileNo: "008",
 storageKey: "oritatami_file008",
@@ -580,39 +580,43 @@ let cardPos = { ...CONFIG.puzzle.start };
 let pzDrag = null;
 
 function openPuzzle() {
+if (!pz || !card) return;
 pz.style.display = "flex";
 card.style.width = CONFIG.puzzle.cardWidthPct + "%";
 if (CONFIG.puzzle.cardHeightPct) card.style.height = CONFIG.puzzle.cardHeightPct + "%";
 applyCard();
 }
-function closePuzzle() { pz.style.display = "none"; }
+function closePuzzle() { if (pz) pz.style.display = "none"; }
 function resetCard() { cardPos = { ...CONFIG.puzzle.start }; applyCard(); }
-function applyCard() { card.style.left = cardPos.x + "%"; card.style.top = cardPos.y + "%"; }
+function applyCard() { if (!card) return; card.style.left = cardPos.x + "%"; card.style.top = cardPos.y + "%"; }
 
-card.addEventListener("pointerdown", (ev) => {
-ev.preventDefault();
-const r = stage_.getBoundingClientRect();
-pzDrag = { sx: ev.clientX, sy: ev.clientY, ox: cardPos.x, oy: cardPos.y, w: r.width, h: r.height };
-try { card.setPointerCapture(ev.pointerId); } catch (e) {}
-});
-card.addEventListener("pointermove", (ev) => {
-if (!pzDrag) return;
-cardPos.x = pzDrag.ox + ((ev.clientX - pzDrag.sx) / pzDrag.w) * 100;
-cardPos.y = pzDrag.oy + ((ev.clientY - pzDrag.sy) / pzDrag.h) * 100;
-applyCard();
-});
-card.addEventListener("pointerup", () => {
-if (!pzDrag) return;
-pzDrag = null;
-const t = CONFIG.puzzle.target;
-const d = Math.hypot(cardPos.x - t.x, cardPos.y - t.y);
-// 吸い付き・位置固定はしない（自分の手で目印に合わせる）。
-// おおよそ合ったら気づきの合図だけ出す。カードは動かさず、閉じもしない。
-if (d < CONFIG.puzzle.revealDist && !state.snapped) {
-state.snapped = true; saveState();
-nfSay(CONFIG.puzzle.onSnap);                            // 合致したらN.Fのセリフをチャットへ
+if (card && stage_) {
+  card.addEventListener("pointerdown", (ev) => {
+  ev.preventDefault();
+  const r = stage_.getBoundingClientRect();
+  pzDrag = { sx: ev.clientX, sy: ev.clientY, ox: cardPos.x, oy: cardPos.y, w: r.width, h: r.height };
+  try { card.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  card.addEventListener("pointermove", (ev) => {
+  if (!pzDrag) return;
+  cardPos.x = pzDrag.ox + ((ev.clientX - pzDrag.sx) / pzDrag.w) * 100;
+  cardPos.y = pzDrag.oy + ((ev.clientY - pzDrag.sy) / pzDrag.h) * 100;
+  applyCard();
+  });
+  card.addEventListener("pointerup", () => {
+  if (!pzDrag) return;
+  pzDrag = null;
+  const t = CONFIG.puzzle.target;
+  const d = Math.hypot(cardPos.x - t.x, cardPos.y - t.y);
+  // 吸い付き・位置固定はしない（自分の手で目印に合わせる）。
+  // おおよそ合ったら気づきの合図だけ出す。カードは動かさず、閉じもしない。
+  if (d < CONFIG.puzzle.revealDist && !state.snapped) {
+  state.snapped = true; saveState();
+  nfSay(CONFIG.puzzle.onSnap);                            // 合致したらN.Fのセリフをチャットへ
+  }
+  });
 }
-});
+
 
 // ================= X報告（File006と同一仕様：本文末尾に告知URLを連結） =================
 function postToX() {
@@ -637,18 +641,21 @@ const lightbox = $("imgLightbox"), lbImg = $("lbImg");
 let lbScale = 1, lbTx = 0, lbTy = 0;
 const lbPts = new Map();
 let lbStartDist = 0, lbStartScale = 1, lbStartTxy = { x: 0, y: 0 }, lbStartMid = { x: 0, y: 0 }, lbMoved = false, lbLastTap = 0;
-function lbApply() { lbImg.style.transform = `translate(${lbTx}px,${lbTy}px) scale(${lbScale})`; }
+function lbApply() { if (lbImg) lbImg.style.transform = `translate(${lbTx}px,${lbTy}px) scale(${lbScale})`; }
 function lbReset() { lbScale = 1; lbTx = 0; lbTy = 0; lbApply(); }
-function openLightbox(src) { lbReset(); lbImg.src = src; lightbox.classList.add("on"); }
-function closeLightbox() { lightbox.classList.remove("on"); lbImg.src = ""; lbReset(); }
-log.addEventListener("click", (e) => {
+function openLightbox(src) { if (!lightbox || !lbImg) return; lbReset(); lbImg.src = src; lightbox.classList.add("on"); }
+function closeLightbox() { if (!lightbox || !lbImg) return; lightbox.classList.remove("on"); lbImg.src = ""; lbReset(); }
+if (log) log.addEventListener("click", (e) => {
 const im = e.target.closest(".bubble img");
 if (im && im.src) openLightbox(im.src);
 });
-lightbox.querySelector(".close").addEventListener("click", (e) => { e.stopPropagation(); closeLightbox(); });
+if (lightbox) {
+  const closeBtn = lightbox.querySelector(".close");
+  if (closeBtn) closeBtn.addEventListener("click", (e) => { e.stopPropagation(); closeLightbox(); });
+}
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 // ピンチズーム / ドラッグ移動 / タップで閉じる / ダブルタップで拡大切替
-lightbox.addEventListener("pointerdown", (e) => {
+if (lightbox) lightbox.addEventListener("pointerdown", (e) => {
 lbPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
 lbMoved = false;
 const now = Date.now();
@@ -660,7 +667,7 @@ lbStartDist = Math.hypot(a.x - b.x, a.y - b.y); lbStartScale = lbScale; lbStartT
 } else { lbStartTxy = { x: lbTx, y: lbTy }; lbStartMid = { x: e.clientX, y: e.clientY }; }
 try { lightbox.setPointerCapture(e.pointerId); } catch (err) {}
 });
-lightbox.addEventListener("pointermove", (e) => {
+if (lightbox) lightbox.addEventListener("pointermove", (e) => {
 if (!lbPts.has(e.pointerId)) return;
 lbPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
 if (lbPts.size === 2) {
@@ -676,9 +683,9 @@ lbPts.delete(e.pointerId);
 if (lbPts.size === 0 && !lbMoved && lbScale <= 1) closeLightbox();  // ズームしていない時の単純タップで閉じる
 if (lbScale <= 1) { lbTx = 0; lbTy = 0; lbApply(); }
 }
-lightbox.addEventListener("pointerup", lbEnd);
-lightbox.addEventListener("pointercancel", lbEnd);
-lightbox.addEventListener("wheel", (e) => {  // PC: ホイールで拡大縮小
+if (lightbox) lightbox.addEventListener("pointerup", lbEnd);
+if (lightbox) lightbox.addEventListener("pointercancel", lbEnd);
+if (lightbox) lightbox.addEventListener("wheel", (e) => {  // PC: ホイールで拡大縮小
 e.preventDefault();
 lbScale = Math.min(6, Math.max(1, lbScale * (e.deltaY < 0 ? 1.12 : 0.89)));
 if (lbScale <= 1) { lbTx = 0; lbTy = 0; }
@@ -693,13 +700,25 @@ _p.delete("reset");
 history.replaceState(null, "", location.pathname + (_p.toString() ? "?" + _p.toString() : ""));
 }
 }
-const saved = loadState();
-if (saved && (saved.stage !== 1 || saved.snapped || (saved.history?.length ?? 0) > 0)) {
-Object.assign(state, saved);
-addSys("―― 前回の捜索の続きから ――");
-nfSay({ nf: "戻ったか。捜索を続けよう。" });
+function startApp() {
+  const saved = loadState();
+  if (saved && (saved.stage !== 1 || saved.snapped || (saved.history?.length ?? 0) > 0)) {
+    Object.assign(state, saved);
+    addSys("―― 前回の捜索の続きから ――");
+    nfSay({ nf: "戻ったか。捜索を続けよう。" });
+    return;
+  }
+
+  if (CONFIG.intro.length > 0) {
+    addNF(CONFIG.intro[0]);
+    for (let i = 1; i < CONFIG.intro.length; i++) nfSay(CONFIG.intro[i], 700);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp, { once: true });
 } else {
-CONFIG.intro.forEach((m) => nfSay(m, 700));
+  startApp();
 }
 </script>
 </body>
