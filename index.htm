@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>おりたたみ探偵事務所 File008</title>
 <style>
-/* おりたたみ世界観のチャットUI */
+/* LINE風（青背景×緑吹き出し）を避けた、おりたたみ世界観のチャットUI */
 :root {
 --bg: #20242f; --panel: #2a2f3d; --ink: #171f22;
 --indigo: #7a80d6; --deep: #424592; --paper: #f4f3ee; --paperline: #dddace;
@@ -153,7 +153,7 @@ background: none; border: none; cursor: pointer; opacity: .85; }
 </div>
 
 <script>
-// ================= CONFIG（File008・反応一覧準拠） =================
+// ================= CONFIG（File008・反応一覧(1).xlsx 準拠） =================
 const CONFIG = {
 fileNo: "008",
 storageKey: "oritatami_file008",
@@ -257,8 +257,8 @@ patterns: [[['電気','明り','明かり','照明','蛍光灯'],['消','暗','O
 when: (s) => !s.boardShown,
 reply: [{ nf: 'まずは何を注文しなくてはいけないのか、考えてほしい。' }],
 },
-{ // No19〜20・23: 消灯指示・No4到達済み
-patterns: [[['電気','明り','明かり','照明','蛍光灯'],['消','暗','OFF','off','オフ']]],
+{ // No19〜20・23: メニューを暗くする指示・No4到達済み
+patterns: [[['メニュー'],['消','暗','OFF','off','オフ']]],
 when: (s) => !!s.boardShown,
 set: { lightsOffSeen: true },
 reply: [
