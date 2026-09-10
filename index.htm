@@ -221,7 +221,7 @@ reply: [
 patterns: [[['アイス']]],
 set: { iceSeen: true },
 reply: [
-{ nf: 'そうか、コーヒーは豆を「ひく」。そしてメニューの文字を見るためには電気を「けした」という法則か。さすがだな。' },
+{ nf: 'そうか、コーヒーは豆を「ひく」。そしてメニューの文字を見るためには電気を「けした」という法則か。さすがだな。', onDisplaySet: { no7Displayed: true, iceSeen: true } },
 { nf: '「アイス」か…再び注文すればいいのだろうか？\nしかし、アイスというメニューはない。\n何を注文すればいいだろうか。' },
 ],
 },
@@ -237,7 +237,7 @@ reply: [{ nf: '店主が関西出身で小さいころから「レイコ」だ�
 },
 { // No14〜15: コーヒーフロート（No7送信後のみ）
 patterns: [[['コーヒーフロート']]],
-when: (s) => !!s.iceSeen,
+when: (s) => !!s.no7Displayed || !!s.iceSeen,
 set: { floatOrdered: true },
 reply: [
 { nf: '確かに「アイス」が乗った商品だな。\nしかし特段変わった様子はなさそうだ' },
@@ -250,6 +250,13 @@ patterns: [[['コースター']]],
 reply: [
 { nf: 'コーヒーフロートと一緒にでてきたものだな。写真を送ろう。' },
 { nf: '', img: 'file008_coaster.png', displayDelay: 2000 },
+],
+},
+{ // No18: No4未表示の消灯指示
+patterns: [[['電気','明り','照明','蛍光灯'],['消','暗','OFF','off','オフ']]],
+when: (s) => !s.no4Displayed,
+reply: [
+{ nf: 'まずは何を注文しなくてはいけないのか、考えてほしい。' },
 ],
 },
 { // No19→No23→No20: No4表示後の消灯指示
@@ -446,7 +453,7 @@ onSnap: [],
 // ================= チャットエンジン =================
 const $ = (id) => document.getElementById(id);
 const log = $("log"), msg = $("msg"), send = $("send");
-const state = { stage: 1, snapped: false, cleared: false, history: [], ordered: false, boardShown: false, no4Displayed: false, iceSeen: false, iceCoffeeOrdered: false, reikoAfterIceSpecialSent: false, floatOrdered: false, lightsOffSeen: false };
+const state = { stage: 1, snapped: false, cleared: false, history: [], ordered: false, boardShown: false, no4Displayed: false, iceSeen: false, no7Displayed: false, iceCoffeeOrdered: false, reikoAfterIceSpecialSent: false, floatOrdered: false, lightsOffSeen: false };
 
 function saveState() { localStorage.setItem(CONFIG.storageKey, JSON.stringify(state)); }
 function loadState() {
