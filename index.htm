@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>おりたたみ探偵事務所 File008</title>
 <style>
-/* LINE風（青背景×緑吹き出し）を避けた、おりたたみ世界観のチャットUI */
+/* おりたたみ世界観のチャットUI */
 :root {
 --bg: #20242f; --panel: #2a2f3d; --ink: #171f22;
 --indigo: #7a80d6; --deep: #424592; --paper: #f4f3ee; --paperline: #dddace;
@@ -194,11 +194,11 @@ N.Fさんがチャット打つのが遅そうだからね。
 reactions: [
 { // No2〜4: ブレンドを指定条件で注文
 patterns: [[['ブレンド'],['二本','二ホン','にほん','2本'],['0','ぜろ','ゼロ']]],
-set: { ordered: true, boardShown: true },
+set: { ordered: true },
 reply: [
 { nf: 'その言葉で注文すればいいのか。\nわかった、少し待ってくれ。' },
 { nf: '注文してみた。\nさて、何が出てくることやら…。', displayDelay: 2000 },
-{ nf: 'ボードを一枚出されたが…\nこれはどういう意味なのだろうか？\n君ならこのボードの意味がわかるか？\n\nブレンドは今作っているそうだ。', img: 'file008_menu02.png', displayDelay: 2000 },
+{ nf: 'ボードを一枚出されたが…\nこれはどういう意味なのだろうか？\n君ならこのボードの意味がわかるか？\n\nブレンドは今作っているそうだ。', img: 'file008_menu02.png', displayDelay: 2000, onDisplaySet: { no4Displayed: true, boardShown: true } },
 ],
 },
 { // No5〜6: 豆
@@ -252,14 +252,9 @@ reply: [
 { nf: '', img: 'file008_coaster.png', displayDelay: 2000 },
 ],
 },
-{ // No18: 消灯指示・まだNo4未到達（No17「眩」より優先）
-patterns: [[['電気','明り','明かり','照明','蛍光灯'],['消','暗','OFF','off','オフ']]],
-when: (s) => !s.boardShown,
-reply: [{ nf: 'まずは何を注文しなくてはいけないのか、考えてほしい。' }],
-},
-{ // No19→No23→No20: 消灯指示・No4到達済み
-patterns: [[['電気','明り','明かり','照明','蛍光灯'],['消','暗','OFF','off','オフ']]],
-when: (s) => !!s.boardShown,
+{ // No19→No23→No20: No4表示後の消灯指示
+patterns: [[['電気','明り','照明','蛍光灯'],['消','暗','OFF','off','オフ']]],
+when: (s) => !!s.no4Displayed,
 set: { lightsOffSeen: true },
 reply: [
 { nf: '電気を消すように頼めばいいのか？\nちょっと待ってくれ' },
@@ -451,7 +446,7 @@ onSnap: [],
 // ================= チャットエンジン =================
 const $ = (id) => document.getElementById(id);
 const log = $("log"), msg = $("msg"), send = $("send");
-const state = { stage: 1, snapped: false, cleared: false, history: [], ordered: false, boardShown: false, iceSeen: false, iceCoffeeOrdered: false, reikoAfterIceSpecialSent: false, floatOrdered: false, lightsOffSeen: false };
+const state = { stage: 1, snapped: false, cleared: false, history: [], ordered: false, boardShown: false, no4Displayed: false, iceSeen: false, iceCoffeeOrdered: false, reikoAfterIceSpecialSent: false, floatOrdered: false, lightsOffSeen: false };
 
 function saveState() { localStorage.setItem(CONFIG.storageKey, JSON.stringify(state)); }
 function loadState() {
@@ -491,6 +486,7 @@ wrap.appendChild(btn);
 bubble.appendChild(wrap);
 }
 log.appendChild(b); scrollDown();
+if (item.onDisplaySet) { Object.assign(state, item.onDisplaySet); saveState(); }
 if (item.share) {
 const btn = el(`<div class="row nf"><div class="bubble" style="text-align:center"><button class="act" onclick="postToX()">🔍 Xで解決を報告する</button></div></div>`);
 log.appendChild(btn); scrollDown();
