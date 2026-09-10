@@ -265,13 +265,13 @@ when: (s) => !!s.no4Displayed,
 set: { lightsOffSeen: true },
 reply: [
 { nf: '電気を消すように頼めばいいのか？\nちょっと待ってくれ' },
-{ nf: 'なんだこの単語は…？君なら何か読み解けるのだろうか…？', img: 'file008_menu_d.png', displayDelay: 2000 },
+{ nf: 'なんだこの単語は…？君なら何か読み解けるのだろうか…？', img: 'file008_menu02_d.png', displayDelay: 2000 },
 ],
 },
 { // No23→No24: メニューを消す／暗くする指示
 patterns: [[['メニュー'],['消','暗','OFF','off','オフ']]],
 reply: [
-{ nf: '電気も消してもらった。\n\nなにやら文字が浮かび上がってきたぞ…？\nしかしここでもまた謎か…、頼んだよ。', img: 'file008_menu02_d.png' },
+{ nf: '電気も消してもらった。\n\nなにやら文字が浮かび上がってきたぞ…？\nしかしここでもまた謎か…、頼んだよ。', img: 'file008_menu_d.png' },
 { nf: '注文したブレンドも配膳された。\n胃がコーヒーで満たされている感覚だ…しかし残すわけにもいかないな…', img: 'file008_cup.png', displayDelay: 4000 },
 ],
 },
